@@ -43,6 +43,7 @@ function useReminderNotifications (tasks: Task[]) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App () {
   const [user, setUser] = useState<any>(null)
+  const getUserId = () => user?.id as string | undefined
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
 
@@ -106,12 +107,25 @@ export default function App () {
   }
 
   const handleSaveTask = async (data: Partial<Task>) => {
+    // Sanitize: convert empty strings to null for nullable FK columns
+    const clean = {
+      ...data,
+      project_id: data.project_id || null,
+      parent_task_id: data.parent_task_id || null,
+      due_date_time: data.due_date_time || null,
+      deadline: data.deadline || null,
+      reminder: data.reminder || null,
+      location: data.location || null,
+      description: data.description || null,
+    }
     if (taskModal.task) {
-      const { error } = await supabase.from('tasks').update(data).eq('id', taskModal.task.id)
-      if (!error) setTasks(tasks.map(t => t.id === taskModal.task!.id ? { ...t, ...data } : t))
+      const { error } = await supabase.from('tasks').update(clean).eq('id', taskModal.task.id)
+      if (!error) setTasks(tasks.map(t => t.id === taskModal.task!.id ? { ...t, ...clean } : t))
+      else console.error('Update task error:', error)
     } else {
-      const { data: newTask, error } = await supabase.from('tasks').insert([data]).select()
+      const { data: newTask, error } = await supabase.from('tasks').insert([{ ...clean, user_id: getUserId() }]).select()
       if (!error && newTask) setTasks([...newTask, ...tasks])
+      else console.error('Insert task error:', error)
     }
     setTaskModal({ open: false })
   }
@@ -124,11 +138,12 @@ export default function App () {
 
   const handleDuplicateTask = async (task: Task) => {
     const { data: newTask, error } = await supabase.from('tasks').insert([{
-      title: task.title + ' (copy)', description: task.description, priority: task.priority,
-      project_id: task.project_id, due_date_time: task.due_date_time, tags: task.tags,
-      location: task.location, reminder: task.reminder,
+      user_id: getUserId(), title: task.title + ' (copy)', description: task.description,
+      priority: task.priority, project_id: task.project_id, due_date_time: task.due_date_time,
+      tags: task.tags, location: task.location, reminder: task.reminder,
     }]).select()
     if (!error && newTask) setTasks([...newTask, ...tasks])
+    else console.error('Duplicate task error:', error)
   }
 
   // ── Project handlers ────────────────────────────────────────────────────────
@@ -136,9 +151,11 @@ export default function App () {
     if (projectModal.project) {
       const { error } = await supabase.from('projects').update(data).eq('id', projectModal.project.id)
       if (!error) setProjects(projects.map(p => p.id === projectModal.project!.id ? { ...p, ...data } : p))
+      else console.error('Update project error:', error)
     } else {
-      const { data: newProj, error } = await supabase.from('projects').insert([data]).select()
+      const { data: newProj, error } = await supabase.from('projects').insert([{ ...data, user_id: getUserId() }]).select()
       if (!error && newProj) setProjects([...newProj, ...projects])
+      else console.error('Insert project error:', error)
     }
     setProjectModal({ open: false })
   }
@@ -165,9 +182,11 @@ export default function App () {
     if (habitModal.habit) {
       const { error } = await supabase.from('habits').update(data).eq('id', habitModal.habit.id)
       if (!error) setHabits(habits.map(h => h.id === habitModal.habit!.id ? { ...h, ...data } : h))
+      else console.error('Update habit error:', error)
     } else {
-      const { data: newH, error } = await supabase.from('habits').insert([data]).select()
+      const { data: newH, error } = await supabase.from('habits').insert([{ ...data, user_id: getUserId() }]).select()
       if (!error && newH) setHabits([...newH, ...habits])
+      else console.error('Insert habit error:', error)
     }
     setHabitModal({ open: false })
   }
@@ -179,12 +198,15 @@ export default function App () {
 
   // ── Note handlers ───────────────────────────────────────────────────────────
   const handleSaveNote = async (data: Partial<NoteResource>) => {
+    const clean = { ...data, project_id: data.project_id || null, file_url: data.file_url || null, content: data.content || null }
     if (noteModal.note) {
-      const { error } = await supabase.from('notes_resources').update(data).eq('id', noteModal.note.id)
-      if (!error) setNotes(notes.map(n => n.id === noteModal.note!.id ? { ...n, ...data } : n))
+      const { error } = await supabase.from('notes_resources').update(clean).eq('id', noteModal.note.id)
+      if (!error) setNotes(notes.map(n => n.id === noteModal.note!.id ? { ...n, ...clean } : n))
+      else console.error('Update note error:', error)
     } else {
-      const { data: newNote, error } = await supabase.from('notes_resources').insert([data]).select()
+      const { data: newNote, error } = await supabase.from('notes_resources').insert([{ ...clean, user_id: getUserId() }]).select()
       if (!error && newNote) setNotes([...newNote, ...notes])
+      else console.error('Insert note error:', error)
     }
     setNoteModal({ open: false })
   }
