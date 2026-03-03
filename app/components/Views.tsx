@@ -1,53 +1,52 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Check, FolderKanban, Edit, Trash2, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react'
+import { Plus, Check, ChevronDown, ChevronUp, Edit2, Trash2, Link as LinkIcon } from 'lucide-react'
 import { Task, Project, Habit, HabitLog, NoteResource, HabitCategory } from '@/lib/supabase'
-import { TaskItem } from './TaskComponents'
+import { TaskCard } from './TaskComponents'
 import { HabitTracker } from './OtherComponents'
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-export function Dashboard ({ tasks, projects, habits, habitLogs, onToggleHabit, onToggleTask,
-    onEditTask, onAddTask, onAddProject, onAddHabit }: {
-        tasks: Task[]; projects: Project[]; habits: Habit[]; habitLogs: HabitLog[]
-        onToggleHabit: (id: string) => void; onToggleTask: (id: string) => void
-        onEditTask: (t: Task) => void; onAddTask: () => void; onAddProject: () => void; onAddHabit: () => void
-    }) {
+export function Dashboard ({ tasks, projects, habits, habitLogs, onToggleHabit, onToggleTask, onEditTask, onAddTask, onAddProject, onAddHabit }: {
+    tasks: Task[]; projects: Project[]; habits: Habit[]; habitLogs: HabitLog[]
+    onToggleHabit: (id: string) => void; onToggleTask: (id: string) => void; onEditTask: (t: Task) => void
+    onAddTask: () => void; onAddProject: () => void; onAddHabit: () => void
+}) {
     const today = new Date().toISOString().split('T')[0]
-    const todayTasks = tasks.filter(t => { if (!t.due_date_time || t.is_completed) return false; return t.due_date_time.split('T')[0] === today })
-    const overdueTasks = tasks.filter(t => { if (!t.due_date_time || t.is_completed) return false; return t.due_date_time.split('T')[0] < today })
-    const activeProjects = projects.filter(p => p.status === 'Active')
-    const todayLogs = habitLogs.filter(l => l.log_date === today)
-    const completedHabits = todayLogs.filter(l => l.is_completed).length
-    const pct = habits.length > 0 ? Math.round((completedHabits / habits.length) * 100) : 0
+    const dateLabel = new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })
+    const todayTasks = tasks.filter(t => t.due_date_time && !t.is_completed && t.due_date_time.split('T')[0] === today)
+    const overdueTasks = tasks.filter(t => t.due_date_time && !t.is_completed && t.due_date_time.split('T')[0] < today)
+    const activeP = projects.filter(p => p.status === 'Active').length
+    const todayLogs = habitLogs.filter(l => l.log_date === today && l.is_completed)
+    const pct = habits.length > 0 ? Math.round(todayLogs.length / habits.length * 100) : 0
 
     return (
-        <div className="space-y-4">
+        <div className="page" style={{ paddingTop: 16, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Greeting */}
+            <div>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'} 👋</h1>
+                <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{dateLabel}</p>
+            </div>
+
             {/* Quick Add */}
-            <div className="flex gap-2">
-                <button onClick={onAddTask} className="btn btn-primary flex-1 text-xs py-2">
-                    <Plus size={13} className="mr-1" />Task
-                </button>
-                <button onClick={onAddProject} className="btn btn-secondary flex-1 text-xs py-2">
-                    <Plus size={13} className="mr-1" />Project
-                </button>
-                <button onClick={onAddHabit} className="btn btn-secondary flex-1 text-xs py-2">
-                    <Plus size={13} className="mr-1" />Habit
-                </button>
+            <div className="quick-add">
+                <button className="btn btn-primary" onClick={onAddTask}><Plus size={14} />Task</button>
+                <button className="btn btn-secondary" onClick={onAddProject}><Plus size={14} />Project</button>
+                <button className="btn btn-secondary" onClick={onAddHabit}><Plus size={14} />Habit</button>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-2">
-                <div className="card text-center">
-                    <p className="text-2xl font-bold text-primary-600">{activeProjects.length}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Projects</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <div className="stat-card">
+                    <div className="stat-number" style={{ color: '#4F46E5' }}>{activeP}</div>
+                    <div className="stat-label">Active</div>
                 </div>
-                <div className="card text-center">
-                    <p className="text-2xl font-bold text-amber-500">{todayTasks.length + overdueTasks.length}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Tasks Due</p>
+                <div className="stat-card">
+                    <div className="stat-number" style={{ color: overdueTasks.length > 0 ? '#EF4444' : '#F59E0B' }}>{todayTasks.length + overdueTasks.length}</div>
+                    <div className="stat-label">Due Today</div>
                 </div>
-                <div className="card text-center">
-                    <p className="text-2xl font-bold text-green-600">{pct}%</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Habits</p>
+                <div className="stat-card">
+                    <div className="stat-number" style={{ color: pct === 100 ? '#10B981' : '#6366F1' }}>{pct}%</div>
+                    <div className="stat-label">Habits</div>
                 </div>
             </div>
 
@@ -57,27 +56,18 @@ export function Dashboard ({ tasks, projects, habits, habitLogs, onToggleHabit, 
             {/* Overdue */}
             {overdueTasks.length > 0 && (
                 <div>
-                    <h2 className="text-xs font-semibold text-red-600 mb-2 flex items-center gap-1">
-                        ⚠ Overdue ({overdueTasks.length})
-                    </h2>
-                    <div className="space-y-2">
-                        {overdueTasks.map(t => (
-                            <TaskItem key={t.id} task={t} onToggle={onToggleTask} onEdit={onEditTask}
-                                onDelete={() => { }} onDuplicate={() => { }} projects={projects} />
-                        ))}
-                    </div>
+                    <p className="section-title" style={{ color: '#EF4444', marginBottom: 8 }}>⚠ Overdue ({overdueTasks.length})</p>
+                    {overdueTasks.map(t => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onEdit={onEditTask} onDelete={() => { }} onDuplicate={() => { }} projects={projects} />)}
                 </div>
             )}
 
             {/* Today */}
             <div>
-                <h2 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Today ({todayTasks.length})</h2>
-                <div className="space-y-2">
-                    {todayTasks.length > 0
-                        ? todayTasks.map(t => <TaskItem key={t.id} task={t} onToggle={onToggleTask} onEdit={onEditTask} onDelete={() => { }} onDuplicate={() => { }} projects={projects} />)
-                        : <p className="text-xs text-gray-400 text-center py-4 bg-white rounded-lg border border-gray-100">No tasks due today 🎉</p>
-                    }
-                </div>
+                <p className="section-title" style={{ marginBottom: 8 }}>Today ({todayTasks.length})</p>
+                {todayTasks.length > 0
+                    ? todayTasks.map(t => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onEdit={onEditTask} onDelete={() => { }} onDuplicate={() => { }} projects={projects} />)
+                    : <div className="empty-state"><div className="empty-icon">🎉</div>All caught up for today!</div>
+                }
             </div>
         </div>
     )
@@ -89,76 +79,70 @@ export function TasksView ({ tasks, projects, onToggle, onEdit, onDelete, onDupl
     onToggle: (id: string) => void; onEdit: (t: Task) => void
     onDelete: (id: string) => void; onDuplicate: (t: Task) => void; onAdd: () => void
 }) {
-    const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('pending')
+    const [filter, setFilter] = useState<'pending' | 'all' | 'completed'>('pending')
     const [sortBy, setSortBy] = useState<'due' | 'priority' | 'created'>('due')
     const [tagFilter, setTagFilter] = useState('')
 
-    const allTags = Array.from(new Set(tasks.flatMap(t => t.tags || [])))
+    const allTags = Array.from(new Set(tasks.flatMap(t => t.tags ?? [])))
+    const priOrder = { High: 0, Medium: 1, Low: 2 }
 
     const filtered = tasks
-        .filter(t => {
-            if (filter === 'pending') return !t.is_completed
-            if (filter === 'completed') return t.is_completed
-            return true
-        })
+        .filter(t => filter === 'all' ? true : filter === 'pending' ? !t.is_completed : t.is_completed)
         .filter(t => !tagFilter || t.tags?.includes(tagFilter))
         .sort((a, b) => {
-            if (sortBy === 'due') {
-                if (!a.due_date_time) return 1; if (!b.due_date_time) return -1
-                return new Date(a.due_date_time).getTime() - new Date(b.due_date_time).getTime()
-            }
-            if (sortBy === 'priority') {
-                const o = { High: 0, Medium: 1, Low: 2 }
-                return o[a.priority] - o[b.priority]
-            }
+            if (sortBy === 'due') { if (!a.due_date_time) return 1; if (!b.due_date_time) return -1; return new Date(a.due_date_time).getTime() - new Date(b.due_date_time).getTime() }
+            if (sortBy === 'priority') return priOrder[a.priority] - priOrder[b.priority]
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         })
 
     const parents = filtered.filter(t => !t.parent_task_id)
-    const getSubs = (pid: string) => filtered.filter(t => t.parent_task_id === pid)
+    const getSubs = (id: string) => filtered.filter(t => t.parent_task_id === id)
 
     return (
-        <div className="space-y-3">
-            <button onClick={onAdd} className="btn btn-primary w-full"><Plus size={14} className="mr-1" />New Task</button>
+        <div className="page" style={{ paddingTop: 16, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button className="btn btn-primary" onClick={onAdd} style={{ width: '100%', padding: 11 }}><Plus size={15} />New Task</button>
 
-            <div className="grid grid-cols-2 gap-2">
-                <select value={filter} onChange={e => setFilter(e.target.value as any)} className="input text-xs">
-                    <option value="all">All Tasks</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                </select>
-                <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="input text-xs">
-                    <option value="due">Sort: Due Date</option>
-                    <option value="priority">Sort: Priority</option>
-                    <option value="created">Sort: Created</option>
+            {/* Filter row */}
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+                {(['pending', 'all', 'completed'] as const).map(f => (
+                    <button key={f} onClick={() => setFilter(f)}
+                        style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s', background: filter === f ? '#4F46E5' : '#F3F4F6', color: filter === f ? '#fff' : '#6B7280' }}>
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                ))}
+                <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                    style={{ marginLeft: 'auto', padding: '6px 10px', borderRadius: 20, fontSize: 12, border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <option value="due">Due date</option>
+                    <option value="priority">Priority</option>
+                    <option value="created">Newest</option>
                 </select>
             </div>
 
+            {/* Tag filter */}
             {allTags.length > 0 && (
-                <div className="flex gap-1 flex-wrap">
-                    <button onClick={() => setTagFilter('')}
-                        className={`tag-pill cursor-pointer ${ !tagFilter ? 'bg-primary-100 text-primary-700' : '' }`}>All</button>
-                    {allTags.map(tag => (
-                        <button key={tag} onClick={() => setTagFilter(tag === tagFilter ? '' : tag)}
-                            className={`tag-pill cursor-pointer ${ tagFilter === tag ? 'bg-primary-600 text-white' : '' }`}>{tag}</button>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {['', ...allTags].map(tag => (
+                        <button key={tag || '_all'} onClick={() => setTagFilter(tag)}
+                            className="tag" style={{ cursor: 'pointer', background: tagFilter === tag ? '#4F46E5' : '#EEF2FF', color: tagFilter === tag ? '#fff' : '#4338CA', border: 'none', fontFamily: 'inherit' }}>
+                            {tag || 'All tags'}
+                        </button>
                     ))}
                 </div>
             )}
 
-            <div className="space-y-2">
+            {/* Task list */}
+            <div>
                 {parents.map(task => (
                     <div key={task.id}>
-                        <TaskItem task={task} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} projects={projects} />
+                        <TaskCard task={task} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} projects={projects} />
                         {getSubs(task.id).length > 0 && (
-                            <div className="ml-5 mt-1 space-y-1 border-l-2 border-gray-100 pl-3">
-                                {getSubs(task.id).map(st => (
-                                    <TaskItem key={st.id} task={st} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} projects={projects} />
-                                ))}
+                            <div style={{ marginLeft: 16, paddingLeft: 12, borderLeft: '2px solid #E5E7EB', marginBottom: 6 }}>
+                                {getSubs(task.id).map(st => <TaskCard key={st.id} task={st} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} projects={projects} />)}
                             </div>
                         )}
                     </div>
                 ))}
-                {parents.length === 0 && <p className="text-xs text-gray-400 text-center py-8">No tasks. Create your first!</p>}
+                {parents.length === 0 && <div className="empty-state"><div className="empty-icon">✅</div>No tasks here.</div>}
             </div>
         </div>
     )
@@ -170,61 +154,64 @@ export function ProjectsView ({ projects, tasks, notes, onEdit, onDelete, onAdd 
     onEdit: (p: Project) => void; onDelete: (id: string) => void; onAdd: () => void
 }) {
     const [expanded, setExpanded] = useState<string | null>(null)
-    const grouped = projects.reduce((acc, p) => {
-        if (!acc[p.area_of_life]) acc[p.area_of_life] = []
-        acc[p.area_of_life].push(p); return acc
-    }, {} as Record<string, Project[]>)
+    const grouped = projects.reduce((acc, p) => { (acc[p.area_of_life] ??= []).push(p); return acc }, {} as Record<string, Project[]>)
 
     return (
-        <div className="space-y-4">
-            <button onClick={onAdd} className="btn btn-primary w-full"><Plus size={14} className="mr-1" />New Project</button>
+        <div className="page" style={{ paddingTop: 16, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <button className="btn btn-primary" onClick={onAdd} style={{ width: '100%', padding: 11 }}><Plus size={15} />New Project</button>
+
             {Object.keys(grouped).sort().map(area => (
                 <div key={area}>
-                    <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">{area}</h2>
-                    <div className="space-y-2">
-                        {grouped[area].map(project => {
-                            const ptasks = tasks.filter(t => t.project_id === project.id)
+                    <p className="section-title" style={{ marginBottom: 8 }}>{area}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {grouped[area].map(p => {
+                            const ptasks = tasks.filter(t => t.project_id === p.id)
+                            const pnotes = notes.filter(n => n.project_id === p.id)
                             const done = ptasks.filter(t => t.is_completed).length
                             const pct = ptasks.length > 0 ? (done / ptasks.length) * 100 : 0
-                            const pnotes = notes.filter(n => n.project_id === project.id)
-                            const isExp = expanded === project.id
-                            const statusCls = project.status === 'Active' ? 'badge badge-green' : project.status === 'On Hold' ? 'badge badge-amber' : 'badge badge-gray'
+                            const isExp = expanded === p.id
+                            const statusCls = p.status === 'Active' ? 'badge-green' : p.status === 'On Hold' ? 'badge-amber' : 'badge-gray'
 
                             return (
-                                <div key={project.id} className="card">
-                                    <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpanded(isExp ? null : project.id)}>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-medium text-gray-900">{project.name}</h3>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className={statusCls}>{project.status}</span>
-                                                <span className="text-xs text-gray-400">{done}/{ptasks.length} tasks</span>
+                                <div key={p.id} className="card">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => setExpanded(isExp ? null : p.id)}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{p.name}</span>
+                                                <span className={`badge ${ statusCls }`}>{p.status}</span>
                                             </div>
+                                            <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{done}/{ptasks.length} tasks completed</p>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <button onClick={e => { e.stopPropagation(); onEdit(project) }} className="p-1.5 text-gray-400 hover:text-primary-600"><Edit size={13} /></button>
-                                            <button onClick={e => { e.stopPropagation(); if (confirm('Delete project?')) onDelete(project.id) }} className="p-1.5 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
-                                            {isExp ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+                                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            <button className="btn btn-ghost btn-icon btn-sm" onClick={e => { e.stopPropagation(); onEdit(p) }}><Edit2 size={13} /></button>
+                                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: '#EF4444' }} onClick={e => { e.stopPropagation(); if (confirm('Delete project?')) onDelete(p.id) }}><Trash2 size={13} /></button>
+                                            {isExp ? <ChevronUp size={15} color="#9CA3AF" /> : <ChevronDown size={15} color="#9CA3AF" />}
                                         </div>
                                     </div>
-                                    <div className="progress-bar mt-2"><div className="progress-fill" style={{ width: `${ pct }%` }} /></div>
+
+                                    <div className="progress-track"><div className="progress-fill" style={{ width: `${ pct }%` }} /></div>
+
                                     {isExp && (
-                                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                                            <p className="text-xs font-medium text-gray-600">Tasks</p>
-                                            {ptasks.length === 0 && <p className="text-xs text-gray-400">No tasks linked</p>}
-                                            {ptasks.slice(0, 5).map(t => (
-                                                <div key={t.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-                                                    <input type="checkbox" checked={t.is_completed} readOnly className="w-3.5 h-3.5" />
-                                                    <span className={t.is_completed ? 'line-through text-gray-400' : ''}>{t.title}</span>
-                                                </div>
-                                            ))}
-                                            {ptasks.length > 5 && <p className="text-xs text-gray-400">+{ptasks.length - 5} more</p>}
+                                        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #F3F4F6' }}>
+                                            <p className="section-title" style={{ marginBottom: 8 }}>Tasks</p>
+                                            {ptasks.length === 0 ? <p style={{ fontSize: 12, color: '#9CA3AF' }}>No tasks linked yet.</p>
+                                                : ptasks.slice(0, 6).map(t => (
+                                                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                                                        <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${ t.is_completed ? '#4F46E5' : '#D1D5DB' }`, background: t.is_completed ? '#4F46E5' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                            {t.is_completed && <Check size={10} strokeWidth={3} color="#fff" />}
+                                                        </div>
+                                                        <span style={{ fontSize: 12, color: t.is_completed ? '#9CA3AF' : '#374151', textDecoration: t.is_completed ? 'line-through' : 'none' }}>{t.title}</span>
+                                                    </div>
+                                                ))}
+                                            {ptasks.length > 6 && <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>+{ptasks.length - 6} more tasks</p>}
+
                                             {pnotes.length > 0 && (
                                                 <>
-                                                    <p className="text-xs font-medium text-gray-600 pt-2">Notes</p>
+                                                    <p className="section-title" style={{ marginTop: 12, marginBottom: 8 }}>Notes & Resources</p>
                                                     {pnotes.map(n => (
-                                                        <div key={n.id} className="flex items-center gap-1.5 text-xs text-gray-600">
+                                                        <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                                                             <span className={`badge ${ n.type === 'Note' ? 'badge-blue' : 'badge-purple' }`}>{n.type}</span>
-                                                            <span>{n.title}</span>
+                                                            <span style={{ fontSize: 12, color: '#374151' }}>{n.title}</span>
                                                         </div>
                                                     ))}
                                                 </>
@@ -237,7 +224,7 @@ export function ProjectsView ({ projects, tasks, notes, onEdit, onDelete, onAdd 
                     </div>
                 </div>
             ))}
-            {projects.length === 0 && <p className="text-xs text-gray-400 text-center py-8">No projects yet. Create your first!</p>}
+            {projects.length === 0 && <div className="empty-state"><div className="empty-icon">🗂</div>No projects yet.</div>}
         </div>
     )
 }
@@ -245,61 +232,63 @@ export function ProjectsView ({ projects, tasks, notes, onEdit, onDelete, onAdd 
 // ── HabitsView ────────────────────────────────────────────────────────────────
 export function HabitsView ({ habits, habitLogs, onToggle, onEdit, onDelete, onAdd }: {
     habits: Habit[]; habitLogs: HabitLog[]
-    onToggle: (id: string) => void; onEdit: (h: Habit) => void
-    onDelete: (id: string) => void; onAdd: () => void
+    onToggle: (id: string) => void; onEdit: (h: Habit) => void; onDelete: (id: string) => void; onAdd: () => void
 }) {
     const [catFilter, setCatFilter] = useState<HabitCategory | 'all'>('all')
     const cats: HabitCategory[] = ['Morning', 'Midday', 'Evening']
-    const filtered = catFilter === 'all' ? habits : habits.filter(h => h.category === catFilter)
     const today = new Date().toISOString().split('T')[0]
+    const filtered = catFilter === 'all' ? habits : habits.filter(h => h.category === catFilter)
 
-    const getStreak = (habitId: string) => {
-        const logs = habitLogs.filter(l => l.habit_id === habitId && l.is_completed).sort((a, b) => b.log_date.localeCompare(a.log_date))
+    const getStreak = (id: string) => {
+        const logs = habitLogs.filter(l => l.habit_id === id && l.is_completed).sort((a, b) => b.log_date.localeCompare(a.log_date))
         let streak = 0, cur = new Date()
-        for (const log of logs) {
-            const diff = Math.floor((cur.getTime() - new Date(log.log_date).getTime()) / 86400000)
-            if (diff <= 1) { streak++; cur = new Date(log.log_date) } else break
+        for (const l of logs) {
+            const diff = Math.floor((cur.getTime() - new Date(l.log_date).getTime()) / 86400000)
+            if (diff <= 1) { streak++; cur = new Date(l.log_date) } else break
         }
         return streak
     }
 
+    const catEmoji: Record<string, string> = { Morning: '🌅', Midday: '☀️', Evening: '🌙' }
+
     return (
-        <div className="space-y-3">
-            <button onClick={onAdd} className="btn btn-primary w-full"><Plus size={14} className="mr-1" />New Habit</button>
-            <div className="flex gap-1.5 flex-wrap">
+        <div className="page" style={{ paddingTop: 16, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button className="btn btn-primary" onClick={onAdd} style={{ width: '100%', padding: 11 }}><Plus size={15} />New Habit</button>
+
+            <div style={{ display: 'flex', gap: 6 }}>
                 {(['all', ...cats] as const).map(c => (
                     <button key={c} onClick={() => setCatFilter(c)}
-                        className={`px-3 py-1.5 text-xs rounded-full transition-colors ${ catFilter === c ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600' }`}>
-                        {c === 'all' ? 'All' : c}
+                        style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', background: catFilter === c ? '#4F46E5' : '#F3F4F6', color: catFilter === c ? '#fff' : '#6B7280' }}>
+                        {c === 'all' ? 'All' : `${ catEmoji[c] } ${ c }`}
                     </button>
                 ))}
             </div>
-            <div className="space-y-2">
-                {filtered.map(habit => {
-                    const completed = habitLogs.find(l => l.habit_id === habit.id && l.log_date === today && l.is_completed)
-                    const streak = getStreak(habit.id)
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filtered.map(h => {
+                    const done = habitLogs.find(l => l.habit_id === h.id && l.log_date === today && l.is_completed)
+                    const streak = getStreak(h.id)
                     return (
-                        <div key={habit.id} className="card flex items-center gap-3">
-                            <button onClick={() => onToggle(habit.id)}
-                                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all
-                  ${ completed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-400 text-transparent' }`}>
-                                <Check size={16} />
+                        <div key={h.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button onClick={() => onToggle(h.id)}
+                                style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid ${ done ? '#4F46E5' : '#E5E7EB' }`, background: done ? '#4F46E5' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0 }}>
+                                {done && <Check size={16} strokeWidth={3} color="#fff" />}
                             </button>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-medium text-gray-900">{habit.name}</h3>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${ habit.category === 'Morning' ? 'habit-morning' : habit.category === 'Midday' ? 'habit-midday' : 'habit-evening' }`}>{habit.category}</span>
-                                    {streak > 0 && <span className="text-xs text-amber-600">🔥 {streak}d streak</span>}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{h.name}</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                                    <span className={`badge habit-${ h.category.toLowerCase() }`}>{catEmoji[h.category]} {h.category}</span>
+                                    {streak > 0 && <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 500 }}>🔥 {streak}d streak</span>}
                                 </div>
                             </div>
-                            <div className="flex gap-1">
-                                <button onClick={() => onEdit(habit)} className="p-1.5 text-gray-400 hover:text-primary-600"><Edit size={13} /></button>
-                                <button onClick={() => { if (confirm('Delete habit?')) onDelete(habit.id) }} className="p-1.5 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                            <div style={{ display: 'flex', gap: 2 }}>
+                                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onEdit(h)}><Edit2 size={13} /></button>
+                                <button className="btn btn-ghost btn-icon btn-sm" style={{ color: '#EF4444' }} onClick={() => { if (confirm('Delete habit?')) onDelete(h.id) }}><Trash2 size={13} /></button>
                             </div>
                         </div>
                     )
                 })}
-                {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-8">No habits yet.</p>}
+                {filtered.length === 0 && <div className="empty-state"><div className="empty-icon">✨</div>No habits yet.</div>}
             </div>
         </div>
     )
@@ -310,48 +299,50 @@ export function NotesView ({ notes, projects, onEdit, onDelete, onAdd }: {
     notes: NoteResource[]; projects: Project[]
     onEdit: (n: NoteResource) => void; onDelete: (id: string) => void; onAdd: () => void
 }) {
-    const [type, setType] = useState<'all' | 'Note' | 'Resource'>('all')
-    const filtered = type === 'all' ? notes : notes.filter(n => n.type === type)
+    const [typeFilter, setTypeFilter] = useState<'all' | 'Note' | 'Resource'>('all')
+    const filtered = typeFilter === 'all' ? notes : notes.filter(n => n.type === typeFilter)
 
     return (
-        <div className="space-y-3">
-            <button onClick={onAdd} className="btn btn-primary w-full"><Plus size={14} className="mr-1" />New Note</button>
-            <div className="flex gap-1.5">
+        <div className="page" style={{ paddingTop: 16, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button className="btn btn-primary" onClick={onAdd} style={{ width: '100%', padding: 11 }}><Plus size={15} />New Note</button>
+
+            <div style={{ display: 'flex', gap: 6 }}>
                 {(['all', 'Note', 'Resource'] as const).map(t => (
-                    <button key={t} onClick={() => setType(t)}
-                        className={`px-3 py-1.5 text-xs rounded-full transition-colors ${ type === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600' }`}>
-                        {t === 'all' ? 'All' : t + 's'}
+                    <button key={t} onClick={() => setTypeFilter(t)}
+                        style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', background: typeFilter === t ? '#4F46E5' : '#F3F4F6', color: typeFilter === t ? '#fff' : '#6B7280' }}>
+                        {t === 'all' ? 'All' : t === 'Note' ? '📝 Notes' : '🔗 Resources'}
                     </button>
                 ))}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-                {filtered.map(note => {
-                    const project = projects.find(p => p.id === note.project_id)
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {filtered.map(n => {
+                    const proj = projects.find(p => p.id === n.project_id)
                     return (
-                        <div key={note.id} className="card">
-                            <div className="flex items-start justify-between mb-1.5">
-                                <h3 className="text-sm font-medium text-gray-900 leading-snug flex-1 mr-2 line-clamp-2">{note.title}</h3>
-                                <div className="flex gap-1 flex-shrink-0">
-                                    <button onClick={() => onEdit(note)} className="p-1 text-gray-400 hover:text-primary-600"><Edit size={13} /></button>
-                                    <button onClick={() => { if (confirm('Delete note?')) onDelete(note.id) }} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                        <div key={n.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
+                                <h3 style={{ fontSize: 13, fontWeight: 600, color: '#111827', lineHeight: 1.3, flex: 1 }}>{n.title}</h3>
+                                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onEdit(n)}><Edit2 size={12} /></button>
+                                    <button className="btn btn-ghost btn-icon btn-sm" style={{ color: '#EF4444' }} onClick={() => { if (confirm('Delete?')) onDelete(n.id) }}><Trash2 size={12} /></button>
                                 </div>
                             </div>
-                            {note.content && <p className="text-xs text-gray-500 line-clamp-3 mb-2">{note.content}</p>}
-                            <div className="flex items-center gap-2 text-xs flex-wrap">
-                                <span className={`badge ${ note.type === 'Note' ? 'badge-blue' : 'badge-purple' }`}>{note.type}</span>
-                                {project && <span className="text-gray-400">{project.name}</span>}
+                            {n.content && <p style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.content}</p>}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto' }}>
+                                <span className={`badge ${ n.type === 'Note' ? 'badge-blue' : 'badge-purple' }`}>{n.type}</span>
+                                {proj && <span className="badge badge-gray">{proj.name}</span>}
                             </div>
-                            {note.file_url && (
-                                <a href={note.file_url} target="_blank" rel="noreferrer"
-                                    className="mt-2 flex items-center gap-1 text-xs text-primary-600 hover:underline">
-                                    <LinkIcon size={11} /> Open Link ↗
+                            {n.file_url && (
+                                <a href={n.file_url} target="_blank" rel="noreferrer"
+                                    style={{ fontSize: 11, color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <LinkIcon size={10} />Open link ↗
                                 </a>
                             )}
                         </div>
                     )
                 })}
             </div>
-            {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-8">No notes yet.</p>}
+            {filtered.length === 0 && <div className="empty-state"><div className="empty-icon">📝</div>No notes yet.</div>}
         </div>
     )
 }
