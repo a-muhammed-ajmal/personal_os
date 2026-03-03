@@ -1,0 +1,176 @@
+Context & Role:
+You are an expert Full-Stack Developer and UI/UX Designer. Your task is to build a beautiful, professional, and highly functional personal productivity web application. The app must be heavily mobile-first, optimized for small screens, using compact layouts, and professional typography (small, clean, sans-serif fonts). It must be fully responsive, syncing flawlessly between mobile and PC web browsers.
+
+Tech Stack:
+
+Frontend: React (Next.js recommended for responsive routing)
+
+Backend: Node.js (Express)
+
+Database & Auth: Supabase (PostgreSQL)
+
+Styling: Tailwind CSS (for mobile-first, compact, professional UI)
+
+🗄️ PART 1: SUPABASE DATABASE SCHEMA (RELATIONAL)
+
+Create the following relational database schema in Supabase. Ensure all foreign keys are correctly linked to enable seamless data fetching.
+
+1. projects Table
+
+id: UUID (Primary Key)
+
+name: String
+
+area_of_life: Enum ('Personal', 'Professional', 'Financial', 'Health & Wealth', 'Relationships', 'Vision & Mission', 'Other')
+
+status: Enum ('Active', 'On Hold', 'Completed')
+
+created_at: Timestamp
+
+2. tasks Table
+
+id: UUID (Primary Key)
+
+title: String
+
+description: Text
+
+due_date_time: Timestamp
+
+tags: Array of Strings
+
+reminder: Timestamp
+
+priority: Enum ('Low', 'Medium', 'High')
+
+location: String
+
+deadline: Timestamp
+
+file_url: String (Supabase Storage link)
+
+project_id: UUID (Foreign Key -> projects.id)
+
+parent_task_id: UUID (Foreign Key -> tasks.id, for Subtasks)
+
+is_completed: Boolean (Default: false)
+
+created_at: Timestamp
+
+3. habits Table (The Definitions)
+
+id: UUID (Primary Key)
+
+name: String
+
+category: Enum ('Morning', 'Midday', 'Evening')
+
+created_at: Timestamp
+
+4. habit_logs Table (The Daily Tracking)
+
+id: UUID (Primary Key)
+
+habit_id: UUID (Foreign Key -> habits.id)
+
+log_date: Date
+
+is_completed: Boolean (Default: false)
+
+5. notes_resources Table
+
+id: UUID (Primary Key)
+
+title: String
+
+content: Text
+
+type: Enum ('Note', 'Resource')
+
+project_id: UUID (Foreign Key -> projects.id)
+
+file_url: String (Supabase Storage link)
+
+📱 PART 2: UI/UX & DESIGN SYSTEM (MOBILE-FIRST)
+
+The design must be clean, dense, and functional. Optimize for mobile screens first, ensuring no wasted space.
+
+Typography: Use a clean font like Inter or San Francisco. Force smaller font sizes globally to maximize screen real estate (text-sm for body, text-xs for tags/metadata, text-lg for headers).
+
+Navigation: A clean dropdown menu at the top of the mobile screen for quick navigation (Dashboard, Tasks, Projects, Habits, Notes).
+
+UI Components: Use cards with subtle borders (border-gray-200, shadow-sm, rounded corners).
+
+Interactions: Checkboxes must have satisfying, immediate visual feedback. Swiping gestures or quick-tap interactions should be prioritized.
+
+⚙️ PART 3: CORE APPLICATION FEATURES
+
+1. Dashboard (The Main Screen)
+
+Top Navigation: Dropdown menu for page switching.
+
+Quick Add Bar: Three compact, distinct buttons tightly positioned below the header: [+ Task], [+ Project], [+ Habit].
+
+Today's View: Fetch and display tasks where due_date_time is today AND is_completed is false. Show a separate list for Overdue tasks.
+
+Habit Tracker (Today): Fetch today's habit_logs. Group them visually by 'Morning', 'Midday', and 'Evening'. Make them one-tap checkboxes.
+
+Overview: A compact summary widget showing active projects and overall habit completion percentage.
+
+2. Task Management System
+
+Creation/Edit Modal: Form including all fields from the tasks schema. Include an upload button for files linking to Supabase Storage.
+
+Relations: Dropdown to select a Project (Foreign Key).
+
+Subtasks: A section inside a task to create child tasks (using parent_task_id).
+
+Actions: A quick "Duplicate" button that clones the task row (excluding ID and completion status).
+
+Reminders: Integrate logic to highlight tasks when the reminder timestamp is approaching.
+
+3. Projects & Areas
+
+Grouped list view of projects categorized by their area_of_life.
+
+Clicking a project opens a detail view displaying: Associated Tasks (filtered by project_id), Associated Notes, and Project Status.
+
+4. Notes & Resources
+
+Simple list/grid view of notes and links. Must show relations to active projects.
+
+🚀 PART 4: EXECUTION STEPS FOR THE AI
+
+Please build this step-by-step. Do not move to the next step until I confirm the current one is working.
+
+Step 1: Initialize the Node.js/Next.js environment and setup Tailwind CSS with the specified small-typography design system.
+
+Step 2: Write the SQL commands / Supabase migration files to create the 5 exact tables and relationships listed in Part 1. Setup Supabase client in the frontend.
+
+Step 3: Build the base UI layout (Mobile Dashboard, Dropdown Navigation, Quick Add Buttons).
+
+Step 4: Implement the Tasks API and UI (CRUD operations, subtask logic, duplicate logic).
+
+Step 5: Implement the Habits API and UI (grouped by time of day, daily log generation logic).
+
+Step 6: Implement Projects & Notes, ensuring relational fetching works perfectly (e.g., viewing a project shows its related tasks and notes).
+
+
+Supabase client using the NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPANBASE_ANON_KEY environment variables - credentials:
+
+NEXT_PUBLIC_SUPABASE_URL=https://fnryivoxauyrbcpsyrhk.supabase.co 
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=sb_publishable_LJqDyhTwf5xJR7odZg9Eww_uTdiyhSN
+
+
+Create SQL migration files in the supabase/migrations directory to set up the projects, tasks, habits, habit_logs, and notes_resources tables with the specified schema and relationships.
+
+Build the UI components for task management, including a modal for task creation/editing with file upload functionality, and a section for managing subtasks within a task.
+
+Develop the UI for the habit tracker, displaying today's habits grouped by 'Morning', 'Midday', and 'Evening', with one-tap completion checkboxes.
+
+
+Implement user authentication using Supabase Auth. Create signup and login forms and protect routes so only logged-in users can access their data.
+
+Implement sorting and filtering options for the tasks list. Users should be able to sort by due date, priority, and creation date, and filter by tags and completion status.
+
+Integrate push notification functionality. Send notifications to users for task reminders and upcoming habit check-ins. Configure this to work across web and mobile.
